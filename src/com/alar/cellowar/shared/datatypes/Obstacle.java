@@ -9,7 +9,7 @@ import java.io.Serializable;
 public class Obstacle implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    float _top, _right, _bottom, _left;
+    public float _top, _right, _bottom, _left;
 
     public Obstacle(float left, float top, float right, float bottom) {
         _top = top;
