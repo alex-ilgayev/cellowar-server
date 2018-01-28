@@ -6,6 +6,7 @@ import com.alar.cellowar.shared.datatypes.Session;
 import com.alar.cellowar.shared.messaging.*;
 
 import java.util.LinkedList;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class MessageHandler {
@@ -26,7 +27,8 @@ public class MessageHandler {
 
     public Packet[] handleMessage(IMessage msg){
         // creating new client in required lists.
-        LOGGER.info("handling message number: " + msg.getMessageType());
+        if(msg.getMessageType() != MessageType.REQUEST_POLL_MESSAGE_QUEUE)
+            LOGGER.info("handling message number: " + msg.getMessageType());
         cleanQueues();
         handleClient(msg.getClient());
         // clean queues once a while. when someone polling clean queues after polling (not to lose messages)
@@ -64,17 +66,6 @@ public class MessageHandler {
     }
 
     private Packet[] pollMessageQueue(MessageRequestPollMessageQueue msg){
-        // adding the client to the session pool.
-//        UUID sessionId = msg.client.getGameId();
-//        if(sessionId != null) {
-//            Session session = TemporaryDB.getInstance().findSession(sessionId);
-//            if(session == null) { // session exist.
-//                TemporaryDB.getInstance().addAndReplaceSession(new Session(sessionId, new LinkedList<Client>()));
-//            }
-//            if(!session.getClientList().contains(msg.client))
-//                session.getClientList().add(msg.client);
-//        }
-
         if(msg.client == null || msg.id == null)
             return new Packet[0];
 
@@ -96,12 +87,14 @@ public class MessageHandler {
                 if(client.getCurrSessionId() == null ||
                         (client.getCurrSessionId() != null &&
                                 !client.getCurrSessionId().equals(session.getSessionId()))) {
-                    if(client.getCurrSessionId() == null)
+                    if(client.getCurrSessionId() == null) {
                         LOGGER.info("remove client: " + client.getName() + " from session: " +
-                                "session.getSessionId()");
-                    else
+                                session.getSessionId());
+                    }
+                    else {
                         LOGGER.info("tranferring client: " + client.getName() + " from session: " +
-                                "session.getSessionId()" +  " to session: " + client.getCurrSessionId().toString());
+                                session.getSessionId() + " to session: " + client.getCurrSessionId().toString());
+                    }
                     session.getClientList().remove(client);
                 }
             }
@@ -112,18 +105,13 @@ public class MessageHandler {
         // now updating the session data
         Session session = TemporaryDB.getInstance().findSession(client.getCurrSessionId());
         if(session == null) {
-            //TODO:
-//            LOGGER.info("creating new session in db: " + client.getCurrSessionId());
-//            session = new Session(client.getCurrSession().getSessionId(), client.getCurrSession().getGameType());
-//            session.getClientList().add(client);
-//            TemporaryDB.getInstance().addAndReplaceSession(session);
             LOGGER.severe(ErrorStrings.SERVER_ERROR_CLIENT_SESSION_NOT_SYNCED_TO_DB);
             return;
         }
 
-        LinkedList<Client> clients = session.getClientList();
+        List<Client> clients = session.getClientList();
         if(!clients.contains(client)) {
-            LOGGER.info("Adding client to a active session" + client.getCurrSessionId());
+            LOGGER.info("Adding client " + client.getId() + " to a active session" + client.getCurrSessionId());
             LOGGER.info("Now there is " + clients.size() + " clients in the session");
             clients.add(client);
         }

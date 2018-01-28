@@ -50,6 +50,7 @@ public class MessageQueues {
             TemporaryDB.getInstance().addAndReplaceClient(client);
         }
         else {
+            LOGGER.info("client added to queues: " + client.getId());
             TemporaryDB.getInstance().addAndReplaceClient(client);
             LinkedList<Packet> packetList = new LinkedList<Packet>();
             _queues.put(client.getId(), packetList);
@@ -110,15 +111,16 @@ public class MessageQueues {
                 Client client = TemporaryDB.getInstance().findClient(clientId);
                 if(client != null)
                     TemporaryDB.getInstance().removeClient(client);
-                LOGGER.info("removed client through old queue removing");
+                LOGGER.info("removing client because he was queues but not in timestamp");
             } else {
                 if((currTime - _timeStampMap.get(clientId)) > Settings._TIME_TO_DELETE_CLIENT_MILLIS) {
                     _timeStampMap.remove(clientId);
                     it.remove();
                     Client client = TemporaryDB.getInstance().findClient(clientId);
-                    if(client != null)
+                    if(client != null) {
                         TemporaryDB.getInstance().removeClient(client);
-                    LOGGER.info("removed client through old queue removing");
+                    }
+                    LOGGER.info("removing client because time has passed since he polled");
                 }
             }
         }
