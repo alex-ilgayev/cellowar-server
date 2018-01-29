@@ -40,6 +40,14 @@ public class CelloWarGameData implements Serializable{
         viewH = h;
     }
 
+    public float getWidth() {
+        return this.viewW;
+    }
+
+    public float getHeight() {
+        return this.viewH;
+    }
+
     private float fixX(float x, float newW) {
         return (x/viewW)*newW;
     }
