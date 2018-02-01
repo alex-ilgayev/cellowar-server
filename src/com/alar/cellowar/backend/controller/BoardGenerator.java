@@ -9,7 +9,7 @@ import java.util.Random;
 public class BoardGenerator {
     public static CelloWarGameData createNewBoard () {
         CelloWarGameData m = new CelloWarGameData();
-        m.setWH(1080.0f, 1920.0f);
+        m.setWH(1080.0f, 12004.0f);
 
         int numAnts = 3;
         int numAntis = 2;
@@ -24,8 +24,22 @@ public class BoardGenerator {
 
 
 
-        for(int i=0; i<numAnts; i++) {
-            m.ants.add(generateAntenna(m.getWidth(), m.getHeight(), Antenna.AntennaType.TRANSMISSION));
+        int i=0;
+
+        Antenna ant;
+        do {
+            ant = generateAntenna(m.getWidth(), m.getHeight(), Antenna.AntennaType.TRANSMISSION);
+            boolean insideObs = false;
+            for(Obstacle obs: m.obst) {
+                if(isAntennaInsideObstacle(ant, obs)) {
+                    insideObs = true;
+                }
+            }
+        } while(
+
+
+
+            m.ants.add());
         }
         for(int i=0; i<numAntis; i++) {
             m.ants.add(generateAntenna(m.getWidth(), m.getHeight(), Antenna.AntennaType.ELECTONIC_WARFARE));
@@ -66,5 +80,11 @@ public class BoardGenerator {
     // generate float num between min to max (non inclusive).
     private static float generateRandom(float min, float max) {
         return new Random().nextInt((int)max-(int)min)+min;
+    }
+
+    private static boolean isAntennaInsideObstacle(Antenna ant, Obstacle obs) {
+        if(ant._x > obs._left && ant._x < obs._right && ant._y > obs._top && ant._y < obs._bottom)
+            return true;
+        return false;
     }
 }
