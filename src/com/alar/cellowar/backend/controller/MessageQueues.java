@@ -3,7 +3,9 @@ package com.alar.cellowar.backend.controller;
 import com.alar.cellowar.shared.datatypes.Client;
 import com.alar.cellowar.shared.datatypes.Packet;
 import com.alar.cellowar.shared.datatypes.Session;
+import com.alar.cellowar.shared.messaging.IMessage;
 import com.alar.cellowar.shared.messaging.MessageCompression;
+import com.alar.cellowar.shared.messaging.MessageResponseClientList;
 import com.alar.cellowar.shared.messaging.MessageResponseSession;
 
 import java.util.*;
@@ -90,6 +92,13 @@ public class MessageQueues {
                 p.date = System.currentTimeMillis();
                 p.payload = Base64.getEncoder().encodeToString(MessageCompression.getInstance().compress(returnMsg));
                 MessageQueues.getInstance().addPacket(client, p);
+            } else { // give a non-playing player list of connected clients.
+                MessageResponseClientList returnMsg = new MessageResponseClientList();
+                returnMsg.responseClient = client;
+                returnMsg.responseId = id;
+                returnMsg.clients = TemporaryDB.getInstance().getAllClients();
+
+                MessageQueues.getInstance().addPacket(client, MessageToPacket(returnMsg));
             }
 
             Packet[] packets = _queues.get(client.getId()).toArray(new Packet[0]);
@@ -99,6 +108,13 @@ public class MessageQueues {
         else {
             return new Packet[0];
         }
+    }
+
+    public static Packet MessageToPacket(IMessage msg) {
+        Packet p = new Packet();
+        p.date = System.currentTimeMillis();
+        p.payload = Base64.getEncoder().encodeToString(MessageCompression.getInstance().compress(msg));
+        return p;
     }
 
     public void removeOldQueues(){

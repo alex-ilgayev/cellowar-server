@@ -31,6 +31,15 @@ public class TemporaryDB {
         return _ins;
     }
 
+    public Client[] getAllClients() {
+        if(_clients.size() == 0)
+            return new Client[0];
+        LinkedList<Client> clone = new LinkedList<Client>();
+        for(Client c: _clients)
+            clone.add(c);
+        return clone.toArray(new Client[0]);
+    }
+
     public Client[] getPlayingClients(){
         if(_clients.size() == 0)
             return new Client[0];
