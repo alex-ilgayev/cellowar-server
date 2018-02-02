@@ -9,7 +9,7 @@ import java.util.Random;
 public class BoardGenerator {
     public static CelloWarGameData createNewBoard () {
         CelloWarGameData m = new CelloWarGameData();
-        m.setWH(1080.0f, 12004.0f);
+        m.setWH(1080.0f, 1050.0f);
 
         int numAnts = 3;
         int numAntis = 2;
@@ -22,28 +22,9 @@ public class BoardGenerator {
         m.obst.add(new Obstacle(200.0f, 850.0f, 400.0f, 1050.0f));
         m.obst.add(new Obstacle(700.0f, 850.0f, 900.0f, 1050.0f));
 
+        placingRandomInsideBoard(m, Antenna.AntennaType.TRANSMISSION, numAnts);
+        placingRandomInsideBoard(m, Antenna.AntennaType.ELECTONIC_WARFARE, numAntis);
 
-
-        int i=0;
-
-        Antenna ant;
-        do {
-            ant = generateAntenna(m.getWidth(), m.getHeight(), Antenna.AntennaType.TRANSMISSION);
-            boolean insideObs = false;
-            for(Obstacle obs: m.obst) {
-                if(isAntennaInsideObstacle(ant, obs)) {
-                    insideObs = true;
-                }
-            }
-        } while(
-
-
-
-            m.ants.add());
-        }
-        for(int i=0; i<numAntis; i++) {
-            m.ants.add(generateAntenna(m.getWidth(), m.getHeight(), Antenna.AntennaType.ELECTONIC_WARFARE));
-        }
 
 //        m.ants.add(new Antenna(200.0f, 50.0f, 50.0f, Antenna.AntennaType.TRANSMISSION ));
 //        m.ants.add(new Antenna(80.0f, 650.0f, 650.0f, Antenna.AntennaType.ELECTONIC_WARFARE ));
@@ -65,6 +46,28 @@ public class BoardGenerator {
 //            ant = new Antenna(generateRandomCoord(), generateRandomCoord(),
 //                    generateRandomCoord(), Antenna.AntennaType.ELECTONIC_WARFARE);
 //        }
+
+        return m;
+    }
+
+    // place random antennas/antis in the board without touching obstacles
+    private static CelloWarGameData placingRandomInsideBoard(CelloWarGameData m, Antenna.AntennaType type, int numToPlace) {
+        Antenna ant;
+        int numAntsInserted = 0;
+        while(numAntsInserted < numToPlace) {
+            ant = generateAntenna(m.getWidth(), m.getHeight(), type);
+            boolean insideObs = false;
+            for (Obstacle obs : m.obst) {
+                if (isAntennaInsideObstacle(ant, obs)) {
+                    insideObs = true;
+                }
+            }
+            if (insideObs == false) {
+                m.ants.add(ant);
+                numAntsInserted++;
+            } else
+                insideObs = false;
+        }
 
         return m;
     }
