@@ -9,7 +9,7 @@ import java.util.Random;
 public class BoardGenerator {
     public static CelloWarGameData createNewBoard () {
         CelloWarGameData m = new CelloWarGameData();
-        m.setWH(1080.0f, 1050.0f);
+        m.setWH(1080.0f, 1120.0f);
 
         int numAnts = 3;
         int numAntis = 2;
@@ -17,10 +17,15 @@ public class BoardGenerator {
 
         //TODO: random obstacles.
 
-        m.obst.add(new Obstacle(700.0f, 250.0f, 900.0f, 450.0f));
-        m.obst.add(new Obstacle(200.0f, 250.0f, 400.0f, 450.0f));
-        m.obst.add(new Obstacle(200.0f, 850.0f, 400.0f, 1050.0f));
-        m.obst.add(new Obstacle(700.0f, 850.0f, 900.0f, 1050.0f));
+//        m.obst.add(new Obstacle(700.0f, 250.0f, 900.0f, 450.0f));
+//        m.obst.add(new Obstacle(200.0f, 250.0f, 400.0f, 450.0f));
+//        m.obst.add(new Obstacle(200.0f, 850.0f, 400.0f, 1050.0f));
+//        m.obst.add(new Obstacle(700.0f, 850.0f, 900.0f, 1050.0f));
+
+//        m.obst.add(new Obstacle(75, 25f, 90f, 45f));
+//        m.obst.add(new Obstacle(20f, 25f, 40f, 45f));
+//        m.obst.add(new Obstacle(20f, 85f, 40f, 90f));
+//        m.obst.add(new Obstacle(70f, 85f, 90f, 90f));
 
         placingRandomInsideBoard(m, Antenna.AntennaType.TRANSMISSION, numAnts);
         placingRandomInsideBoard(m, Antenna.AntennaType.ELECTONIC_WARFARE, numAntis);
