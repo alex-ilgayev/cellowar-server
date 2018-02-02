@@ -21,19 +21,14 @@ public class MessageQueues {
     private final static Logger LOGGER = Logger.getLogger("MessageQueues");
 
     // map from client id to relevant client queue.
-    private Hashtable<Integer, LinkedList<Packet>> _queues;
+//    private Hashtable<Integer, LinkedList<Packet>> _queues;
     // map from client id to the last time it polled the queue (which means activity).
-    private Hashtable<Integer, Long> _timeStampMap;
+//    private Hashtable<Integer, Long> _timeStampMap;
 
     private static MessageQueues _ins = null;
 
     private MessageQueues(){
-        _queues = new Hashtable<>();
-        _timeStampMap = new Hashtable<>();
-    }
-
-    private void removeClient(int clientId){
-
+//        _queues = new Hashtable<>();
     }
 
     public static MessageQueues getInstance(){
@@ -41,30 +36,26 @@ public class MessageQueues {
             _ins = new MessageQueues();
         return _ins;
     }
-
-    public boolean isClientExist(Client client) {
-        return _queues.containsKey(client.getId());
-    }
-
-    // if client exists, leaves his packets in the queue.
-    public void addAndReplaceClient(Client client){
-        if(_queues.containsKey(client.getId())){
-            TemporaryDB.getInstance().addAndReplaceClient(client);
-        }
-        else {
-            LOGGER.info("client added to queues: " + client.getId());
-            TemporaryDB.getInstance().addAndReplaceClient(client);
-            LinkedList<Packet> packetList = new LinkedList<Packet>();
-            _queues.put(client.getId(), packetList);
-        }
-    }
+//
+//    // if client exists, leaves his packets in the queue.
+//    public void addAndReplaceClient(Client client){
+//        if(_queues.containsKey(client.getId())){
+//            TemporaryDB.getInstance().addAndReplaceClient(client);
+//        }
+//        else {
+//            LOGGER.info("client added to queues: " + client.getId());
+//            TemporaryDB.getInstance().addAndReplaceClient(client);
+//            LinkedList<Packet> packetList = new LinkedList<Packet>();
+//            _queues.put(client.getId(), packetList);
+//        }
+//    }
 
     public void addPacket(Client client, Packet packet){
-        if(!_queues.containsKey(client.getId())) {
+        if(TemporaryDB.getInstance().findClientById(client.getId()) == null) {
             LOGGER.severe(ErrorStrings.SERVER_ERROR_PACKET_FROM_UNRECOGNIZED_USER);
             return;
         }
-        _queues.get(client.getId()).addLast(packet);
+        TemporaryDB.getInstance().getQueue(client).add(packet);
     }
 
     /**
@@ -76,38 +67,34 @@ public class MessageQueues {
      * @return New awaiting packets.
      */
     public Packet[] getAwaitingPackets(Client client, UUID id){
-        _timeStampMap.put(client.getId(), System.currentTimeMillis());
-        if(_queues.containsKey(client.getId())){
-            // adding session message to the user.
-            UUID clientSessionId = null;
-            Session serverSession = null;
-            if(((clientSessionId = client.getCurrSessionId()) != null)
-                    && ((serverSession = TemporaryDB.getInstance().findSession(clientSessionId)) != null)) { // user is part of active session.
-                MessageResponseSession returnMsg = new MessageResponseSession();
-                returnMsg.responseClient = client;
-                returnMsg.responseId = id;
-                returnMsg.activeSession = serverSession;
+        TemporaryDB.getInstance().setTimestamp(client, System.currentTimeMillis());
 
-                Packet p = new Packet();
-                p.date = System.currentTimeMillis();
-                p.payload = Base64.getEncoder().encodeToString(MessageCompression.getInstance().compress(returnMsg));
-                MessageQueues.getInstance().addPacket(client, p);
-            } else { // give a non-playing player list of connected clients.
-                MessageResponseClientList returnMsg = new MessageResponseClientList();
-                returnMsg.responseClient = client;
-                returnMsg.responseId = id;
-                returnMsg.clients = TemporaryDB.getInstance().getAllClients();
+        // adding session message to the user.
+        UUID clientSessionId = null;
+        Session serverSession = null;
+        if(((clientSessionId = client.getCurrSessionId()) != null)
+                && ((serverSession = TemporaryDB.getInstance().findSession(clientSessionId)) != null)) { // user is part of active session.
+            MessageResponseSession returnMsg = new MessageResponseSession();
+            returnMsg.responseClient = client;
+            returnMsg.responseId = id;
+            returnMsg.activeSession = serverSession;
 
-                MessageQueues.getInstance().addPacket(client, MessageToPacket(returnMsg));
-            }
+            Packet p = new Packet();
+            p.date = System.currentTimeMillis();
+            p.payload = Base64.getEncoder().encodeToString(MessageCompression.getInstance().compress(returnMsg));
+            MessageQueues.getInstance().addPacket(client, p);
+        } else { // give a non-playing player list of connected clients.
+            MessageResponseClientList returnMsg = new MessageResponseClientList();
+            returnMsg.responseClient = client;
+            returnMsg.responseId = id;
+            returnMsg.clients = TemporaryDB.getInstance().getAllClients();
 
-            Packet[] packets = _queues.get(client.getId()).toArray(new Packet[0]);
-            _queues.get(client.getId()).clear();
-            return packets;
+            MessageQueues.getInstance().addPacket(client, MessageToPacket(returnMsg));
         }
-        else {
-            return new Packet[0];
-        }
+
+        Packet[] packets = TemporaryDB.getInstance().getQueue(client).toArray(new Packet[0]);
+        TemporaryDB.getInstance().clearQueue(client);
+        return packets;
     }
 
     public static Packet MessageToPacket(IMessage msg) {
@@ -115,30 +102,5 @@ public class MessageQueues {
         p.date = System.currentTimeMillis();
         p.payload = Base64.getEncoder().encodeToString(MessageCompression.getInstance().compress(msg));
         return p;
-    }
-
-    public void removeOldQueues(){
-        long currTime = System.currentTimeMillis();
-        for(Iterator it = _queues.entrySet().iterator(); it.hasNext();){
-            Map.Entry pair = (Map.Entry) it.next();
-            int clientId = (Integer) pair.getKey();
-            if(!_timeStampMap.containsKey(clientId)){
-                it.remove();
-                Client client = TemporaryDB.getInstance().findClient(clientId);
-                if(client != null)
-                    TemporaryDB.getInstance().removeClient(client);
-                LOGGER.info("removing client because he was queues but not in timestamp");
-            } else {
-                if((currTime - _timeStampMap.get(clientId)) > Settings._TIME_TO_DELETE_CLIENT_MILLIS) {
-                    _timeStampMap.remove(clientId);
-                    it.remove();
-                    Client client = TemporaryDB.getInstance().findClient(clientId);
-                    if(client != null) {
-                        TemporaryDB.getInstance().removeClient(client);
-                    }
-                    LOGGER.info("removing client because time has passed since he polled");
-                }
-            }
-        }
     }
 }

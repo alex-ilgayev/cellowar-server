@@ -1,28 +1,55 @@
 package com.alar.cellowar.backend.controller;
 
 import com.alar.cellowar.shared.datatypes.Client;
+import com.alar.cellowar.shared.datatypes.Packet;
 import com.alar.cellowar.shared.datatypes.Session;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * Created by Alex on 4/28/2015.
  */
 public class TemporaryDB {
     private static TemporaryDB _ins = null;
+    private final static Logger LOGGER = Logger.getLogger("TemporaryDB");
 
-    private LinkedList<Client> _clients;
+    // extending the client class just for DB purpose.
+    private class ExtendedClient {
+        public Client client;
+        // awaiting packets.
+        public List<Packet> packetQueue;
+        // last time it polled.
+        public Long timestamp;
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null)
+                return false;
+            if(o.getClass() == Client.class) {
+                Client client = (Client) o;
+                return this.client.getId() == client.getId();
+            }
+            if(o.getClass() == getClass()) {
+                ExtendedClient client = (ExtendedClient) o;
+                return this.client.getId() == client.client.getId();
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return client.getId();
+        }
+    }
+
+    private Set<ExtendedClient> _clients;
     private LinkedList<Session> _sessions;
 
-    // pool of waiting to find partners.
-    private LinkedList<Client> _poolClients;
-
     private TemporaryDB(){
-        _clients = new LinkedList<Client>();
-        _sessions = new LinkedList<Session>();
-        _poolClients = new LinkedList<>();
+        _clients = new HashSet<>();
+        _sessions = new LinkedList<>();
     }
 
     public static TemporaryDB getInstance(){
@@ -31,85 +58,82 @@ public class TemporaryDB {
         return _ins;
     }
 
+    // *****************
+    // CLIENTS FUNCTIONS
+    // *****************
+
+    private ExtendedClient findExtendedClient(Client c) {
+        for(ExtendedClient ec: _clients) {
+            if(ec.client.equals(c))
+                return ec;
+        }
+        return null;
+    }
+
+    public Client findClientById(int clientId) {
+        for(ExtendedClient ec: _clients) {
+            if(ec.client.getId() == clientId)
+                return ec.client;
+        }
+        return null;
+    }
+
     public Client[] getAllClients() {
         if(_clients.size() == 0)
             return new Client[0];
         LinkedList<Client> clone = new LinkedList<Client>();
-        for(Client c: _clients)
-            clone.add(c);
+        for(ExtendedClient c: _clients)
+            clone.add(c.client);
         return clone.toArray(new Client[0]);
     }
 
-    public Client[] getPlayingClients(){
-        if(_clients.size() == 0)
-            return new Client[0];
-        LinkedList<Client> clone = new LinkedList<Client>();
-        for(Client c: _clients){
-            if(c.getCurrSessionId() != null)
-                clone.add(c);
-        }
-        return clone.toArray(new Client[0]);
-    }
+    synchronized public void addAndReplaceClient(Client client){
+        ExtendedClient existingClient = findExtendedClient(client);
+        ExtendedClient newClient = new ExtendedClient();
+        newClient.client = client;
 
-    public void addAndReplaceJoinPool(Client client) {
-        if(_poolClients.contains(client)){
-            _poolClients.remove(client);
-        }
-        _poolClients.add(client);
-    }
-
-    public void removeFromJoinPool(Client client) {
-        if(_poolClients.contains(client)) {
-            _poolClients.remove(client);
-        }
-    }
-
-    /**
-     * finds match of clients who joined the pool according to the number of people specified.
-     * the function removed the clients from the waiting list and send them.
-     * returns null if none found
-     */
-    public List<Client> findJoinPoolMatch(int num) {
-        int size = _poolClients.size();
-        if(size < num) {
-            return null;
-        }
-        List<Client> ret = new LinkedList<>();
-        for(int i=0; i<num; i++) {
-            Client c = _poolClients.remove(0);
-            ret.add(0, c);
-        }
-        return ret;
-    }
-
-    public void addAndReplaceClient(Client client){
-        if(_clients.contains(client)){
+        if(_clients.contains(client)) {// we are replacing client.
+            newClient.packetQueue = existingClient.packetQueue;
+            newClient.timestamp = existingClient.timestamp;
             _clients.remove(client);
+        } else { // new client
+            newClient.packetQueue = new LinkedList<>();
+
         }
-        _clients.add(client);
+        _clients.add(newClient);
     }
 
-    public void removeClient(Client client){
-        if(_poolClients.contains(client)) {
-            _poolClients.remove(client);
-        }
-
+    synchronized public void removeClient(Client client){
         if(_clients.contains(client)) {
             _clients.remove(client);
         }
 
+        // TODO: optimize. should be removed.
         for(Session session: _sessions){
             if(session.getClientList().contains(client))
                 session.getClientList().remove(client);
         }
     }
 
-    public Client findClient(int clientId){
-        for(Client client: _clients)
-            if(client.getId() == clientId)
-                return client;
-        return null;
+    public void setTimestamp(Client client, long timestamp) {
+        findExtendedClient(client).timestamp = timestamp;
     }
+
+    public long getTimestamp(Client client) {
+        return findExtendedClient(client).timestamp;
+    }
+
+    public List<Packet> getQueue(Client client) {
+        return findExtendedClient(client).packetQueue;
+    }
+
+    public void clearQueue(Client client) {
+        findExtendedClient(client).packetQueue.clear();
+    }
+
+    //******************
+    // SESSION FUNCTIONS
+    //******************
 
     public void addAndReplaceSession(Session session){
         if(_sessions.contains(session)){
@@ -138,17 +162,17 @@ public class TemporaryDB {
         return _sessions.toArray(new Session[0]);
     }
 
-//    /**
-//     * Search for specific client out of client pool.
-//     *
-//     * @param clientId
-//     * @return return the client, or null otherwise.
-//     */
-//    public Client findClient(int clientId){
-//        for(Client client: _clients){
-//            if(client.getId() == clientId)
-//                return client;
-//        }
-//        return null;
-//    }
+    // **********
+    // CLEANING
+    // **********
+
+    public void removeOldQueues(){
+        long currTime = System.currentTimeMillis();
+        for(ExtendedClient c: _clients){
+            if((currTime - c.timestamp) > Settings._TIME_TO_DELETE_CLIENT_MILLIS) {
+                removeClient(c.client);
+                LOGGER.info("removing client because time has passed since he polled");
+            }
+        }
+    }
 }

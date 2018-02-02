@@ -75,7 +75,7 @@ public class MessageHandler {
 
     private void handleClient(Client client){
 
-        MessageQueues.getInstance().addAndReplaceClient(client);
+        TemporaryDB.getInstance().addAndReplaceClient(client);
 
         //TODO:
         // change logic.
@@ -124,7 +124,7 @@ public class MessageHandler {
     private void cleanQueues(){
         long currTime = System.currentTimeMillis();
         if((currTime - _LAST_TIME_CLEANED_QUEUES) > Settings._TIME_TO_CLEAN_QUEUE_MILLIS){
-            MessageQueues.getInstance().removeOldQueues();
+            TemporaryDB.getInstance().removeOldQueues();
             for(Session session: TemporaryDB.getInstance().getAllSessions()) {
                 if(session.getClientList().size() == 0) {
                     LOGGER.info("removing empty session");
