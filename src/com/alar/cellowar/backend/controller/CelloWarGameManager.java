@@ -43,8 +43,7 @@ public class CelloWarGameManager {
 
         CelloWarGameData data = BoardGenerator.createNewBoard();
 
-        //TODO
-        MatchingPool.getInstance().setSingleJoin();
+//        MatchingPool.getInstance().setSingleJoin();
 
         Session sessionReturned = MatchingPool.getInstance().joinPool(requestingClient);
         sessionReturned.setGameData(data);

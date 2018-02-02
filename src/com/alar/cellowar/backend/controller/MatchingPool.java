@@ -78,7 +78,6 @@ public class MatchingPool {
         }
     }
 
-    //TODO
     // for debugging. allow single client to make a game.
     public void setSingleJoin() {
         _isSearching = true;
