@@ -5,7 +5,6 @@ import com.alar.cellowar.shared.datatypes.Packet;
 import com.alar.cellowar.shared.datatypes.Session;
 import com.alar.cellowar.shared.messaging.*;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -26,7 +25,6 @@ public class MessageHandler {
     }
 
     public Packet[] handleMessage(IMessage msg){
-        // creating new client in required lists.
         if(msg.getMessageType() != MessageType.REQUEST_POLL_MESSAGE_QUEUE)
             LOGGER.info("handling message number: " + msg.getMessageType());
         cleanQueues();
@@ -38,12 +36,6 @@ public class MessageHandler {
                 case REQUEST_POLL_MESSAGE_QUEUE:
                     Packet[] result =  pollMessageQueue((MessageRequestPollMessageQueue)msg);
                     return result;
-//                case REQUEST_AVAILABLE_CLIENTS:
-//                    CelloWarGameManager.getInstance().getUsers((MessageRequestAvailableClients)msg);
-//                    break;
-//                case REQUEST_JOIN:
-//                    CelloWarGameManager.getInstance().askJoinGame((MessageRequestJoin) msg);
-//                    break;
                 case REQUEST_JOIN_POOL:
                     CelloWarGameManager.getInstance().askJoinPool((MessageRequestJoinPool) msg);
                     break;
@@ -52,9 +44,6 @@ public class MessageHandler {
                     break;
 //                case REQUEST_SMS:
 //                    SudokuServerGameManager.getInstance().sendTextMessage((MessageRequestSms)msg);
-//                    break;
-//                case REQUEST_NEW_GAME:
-//                    CelloWarGameManager.getInstance().startNewGame((MessageRequestNewGame)msg);
 //                    break;
             }
             // INSERT TO DB.
@@ -77,32 +66,9 @@ public class MessageHandler {
 
         TemporaryDB.getInstance().addAndReplaceClient(client);
 
-        //TODO:
-        // change logic.
-        // int his logic the client decides in which session he belongs to.
-        // checking the validity of the session db on the server. (and update accordingly)
-        for(Session session: TemporaryDB.getInstance().getAllSessions()) {
-            if(session.getClientList().contains(client)) {
-                // if another session contains that client. (or no session at all)
-                if(client.getCurrSessionId() == null ||
-                        (client.getCurrSessionId() != null &&
-                                !client.getCurrSessionId().equals(session.getSessionId()))) {
-                    if(client.getCurrSessionId() == null) {
-                        LOGGER.info("remove client: " + client.getName() + " from session: " +
-                                session.getSessionId());
-                    }
-                    else {
-                        LOGGER.info("tranferring client: " + client.getName() + " from session: " +
-                                session.getSessionId() + " to session: " + client.getCurrSessionId().toString());
-                    }
-                    session.getClientList().remove(client);
-                }
-            }
-        }
-
         if(client.getCurrSessionId() == null)
             return;
-        // now updating the session data
+
         Session session = TemporaryDB.getInstance().findSession(client.getCurrSessionId());
         if(session == null) {
             LOGGER.severe(ErrorStrings.SERVER_ERROR_CLIENT_SESSION_NOT_SYNCED_TO_DB);
@@ -111,9 +77,7 @@ public class MessageHandler {
 
         List<Client> clients = session.getClientList();
         if(!clients.contains(client)) {
-            LOGGER.info("Adding client " + client.getId() + " to a active session" + client.getCurrSessionId());
-            LOGGER.info("Now there is " + clients.size() + " clients in the session");
-            clients.add(client);
+            LOGGER.severe("Client is not included in given session.");
         }
     }
 
@@ -125,12 +89,7 @@ public class MessageHandler {
         long currTime = System.currentTimeMillis();
         if((currTime - _LAST_TIME_CLEANED_QUEUES) > Settings._TIME_TO_CLEAN_QUEUE_MILLIS){
             TemporaryDB.getInstance().removeOldQueues();
-            for(Session session: TemporaryDB.getInstance().getAllSessions()) {
-                if(session.getClientList().size() == 0) {
-                    LOGGER.info("removing empty session");
-                    TemporaryDB.getInstance().removeSession(session);
-                }
-            }
+            TemporaryDB.getInstance().removeUnusedSessions();
             _LAST_TIME_CLEANED_QUEUES = currTime;
         }
     }

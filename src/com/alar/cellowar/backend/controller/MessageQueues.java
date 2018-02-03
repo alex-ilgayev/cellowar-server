@@ -20,35 +20,13 @@ import java.util.logging.Logger;
 public class MessageQueues {
     private final static Logger LOGGER = Logger.getLogger("MessageQueues");
 
-    // map from client id to relevant client queue.
-//    private Hashtable<Integer, LinkedList<Packet>> _queues;
-    // map from client id to the last time it polled the queue (which means activity).
-//    private Hashtable<Integer, Long> _timeStampMap;
-
     private static MessageQueues _ins = null;
-
-    private MessageQueues(){
-//        _queues = new Hashtable<>();
-    }
 
     public static MessageQueues getInstance(){
         if(_ins == null)
             _ins = new MessageQueues();
         return _ins;
     }
-//
-//    // if client exists, leaves his packets in the queue.
-//    public void addAndReplaceClient(Client client){
-//        if(_queues.containsKey(client.getId())){
-//            TemporaryDB.getInstance().addAndReplaceClient(client);
-//        }
-//        else {
-//            LOGGER.info("client added to queues: " + client.getId());
-//            TemporaryDB.getInstance().addAndReplaceClient(client);
-//            LinkedList<Packet> packetList = new LinkedList<Packet>();
-//            _queues.put(client.getId(), packetList);
-//        }
-//    }
 
     public void addPacket(Client client, Packet packet){
         if(TemporaryDB.getInstance().findClientById(client.getId()) == null) {
@@ -70,25 +48,20 @@ public class MessageQueues {
         TemporaryDB.getInstance().setTimestamp(client, System.currentTimeMillis());
 
         // adding session message to the user.
-        UUID clientSessionId = null;
-        Session serverSession = null;
+        UUID clientSessionId;
+        Session serverSession;
         if(((clientSessionId = client.getCurrSessionId()) != null)
                 && ((serverSession = TemporaryDB.getInstance().findSession(clientSessionId)) != null)) { // user is part of active session.
             MessageResponseSession returnMsg = new MessageResponseSession();
             returnMsg.responseClient = client;
             returnMsg.responseId = id;
             returnMsg.activeSession = serverSession;
-
-            Packet p = new Packet();
-            p.date = System.currentTimeMillis();
-            p.payload = Base64.getEncoder().encodeToString(MessageCompression.getInstance().compress(returnMsg));
-            MessageQueues.getInstance().addPacket(client, p);
+            MessageQueues.getInstance().addPacket(client, MessageToPacket(returnMsg));
         } else { // give a non-playing player list of connected clients.
             MessageResponseClientList returnMsg = new MessageResponseClientList();
             returnMsg.responseClient = client;
             returnMsg.responseId = id;
             returnMsg.clients = TemporaryDB.getInstance().getAllClients();
-
             MessageQueues.getInstance().addPacket(client, MessageToPacket(returnMsg));
         }
 

@@ -92,10 +92,10 @@ public class TemporaryDB {
         ExtendedClient newClient = new ExtendedClient();
         newClient.client = client;
 
-        if(_clients.contains(client)) {// we are replacing client.
+        if(existingClient != null) {// we are replacing client.
             newClient.packetQueue = existingClient.packetQueue;
             newClient.timestamp = existingClient.timestamp;
-            _clients.remove(client);
+            _clients.remove(existingClient);
         } else { // new client
             newClient.packetQueue = new LinkedList<>();
 
@@ -172,6 +172,15 @@ public class TemporaryDB {
             if((currTime - c.timestamp) > Settings._TIME_TO_DELETE_CLIENT_MILLIS) {
                 removeClient(c.client);
                 LOGGER.info("removing client because time has passed since he polled");
+            }
+        }
+    }
+
+    public void removeUnusedSessions() {
+        for(Session session: _sessions) {
+            if(session.getClientList().size() == 0) {
+                LOGGER.info("removing empty session");
+                removeSession(session);
             }
         }
     }

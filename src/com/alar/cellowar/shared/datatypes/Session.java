@@ -46,8 +46,16 @@ public class Session implements Serializable{
         return _clientList;
     }
 
+    public void setClientList(List<Client> clientList) {
+        this._clientList = clientList;
+    }
+
     public CelloWarGameData getGameData() {
         return _gameData;
+    }
+
+    public void setGameData(CelloWarGameData gameData) {
+        this._gameData = gameData;
     }
 
     public void setClientOrder(HashMap<Integer, Integer> clientOrder) {
@@ -64,10 +72,6 @@ public class Session implements Serializable{
 
     public void setIsSearching(boolean isSearching) {
         this._isSearching = isSearching;
-    }
-
-    public void setGameData(CelloWarGameData gameData) {
-        this._gameData = gameData;
     }
 
     @Override
